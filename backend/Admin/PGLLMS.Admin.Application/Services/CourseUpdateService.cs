@@ -72,15 +72,26 @@ public class CourseUpdateService
 
         if (activeVersion.IsPublished)
         {
+            // Optionally archive the previous published version before creating the new draft
+            if (request.ArchivePreviousVersion)
+            {
+                activeVersion.IsPublished = false;
+                activeVersion.IsArchived = true;
+            }
+
             var nextNumber = await _versionRepository.GetNextVersionNumberAsync(courseId, ct);
             workingVersion = new CourseVersion
             {
                 CourseId = courseId,
                 VersionNumber = nextNumber,
                 IsPublished = false,
+                IsArchived = false,
             };
             await _versionRepository.AddAsync(workingVersion, ct);
             isNewVersion = true;
+
+            // The course is no longer in Published state — it now has a new draft version
+            course.Status = CourseStatus.Draft;
         }
         else
         {
@@ -106,6 +117,14 @@ public class CourseUpdateService
                 Title = request.CourseInfo.Title,
                 Description = request.CourseInfo.Description,
             });
+        }
+
+        // ── 4b. Update course status (if supplied and not overridden by new-version logic) ────
+        if (!isNewVersion &&
+            request.CourseInfo.Status is not null &&
+            Enum.TryParse<CourseStatus>(request.CourseInfo.Status, ignoreCase: true, out var parsedStatus))
+        {
+            course.Status = parsedStatus;
         }
 
         // ── 5. Soft-delete removed chapters ───────────────────────────────────

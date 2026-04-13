@@ -7,6 +7,12 @@ public class UpdateCourseRequest
     /// <summary>Updated course-level info (title, description).</summary>
     public UpdateCourseInfoDto CourseInfo { get; set; } = default!;
 
+    /// <summary>
+    /// When true and the active version is currently published, that version will be
+    /// marked as archived (IsPublished=false, IsArchived=true) before creating the new draft.
+    /// </summary>
+    public bool ArchivePreviousVersion { get; set; } = false;
+
     /// <summary>Chapters that already exist and have been modified (title or order changed).</summary>
     public List<UpdatedNodeDto> UpdatedNodes { get; set; } = new();
 
@@ -28,6 +34,8 @@ public class UpdateCourseInfoDto
     public string Title { get; set; } = default!;
     public string? Description { get; set; }
     public string LanguageCode { get; set; } = "en";
+    /// <summary>Course-level status override (Draft / Published / Archived). Null means no change.</summary>
+    public string? Status { get; set; }
 }
 
 public class UpdatedNodeDto

@@ -88,40 +88,43 @@ export function CoursesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Courses</h2>
+        <h2 className="text-title-sm font-bold text-gray-900">Courses</h2>
         <Button onClick={() => navigate('/courses/create')}>Create Course</Button>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <input
-          type="text"
-          placeholder="Search by title..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full sm:w-72 px-3 py-2 border border-gray-300 rounded-md text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-        />
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as CourseStatus | 'All')}
-          className="w-full sm:w-44 px-3 py-2 border border-gray-300 rounded-md text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-        >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      {/* Filters + Table card */}
+      <div className="card p-5 xl:p-6 space-y-4">
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <input
+            type="text"
+            placeholder="Search by title..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="form-input sm:w-72"
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as CourseStatus | 'All')}
+            className="form-select sm:w-44"
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      {/* Table */}
-      {isLoading ? (
-        <p className="text-sm text-gray-500">Loading courses…</p>
-      ) : isError ? (
-        <p className="text-sm text-red-500">Failed to load courses. Make sure the backend is running.</p>
-      ) : (
-        <DataTable columns={columns} data={filtered} />
-      )}
+        {/* Table */}
+        {isLoading ? (
+          <p className="text-theme-sm text-gray-500 py-4">Loading courses…</p>
+        ) : isError ? (
+          <p className="text-theme-sm text-red-500 py-4">Failed to load courses. Make sure the backend is running.</p>
+        ) : (
+          <DataTable columns={columns} data={filtered} />
+        )}
+      </div>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/Button'
@@ -26,6 +26,8 @@ export function EditCoursePage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null)
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false)
+  const cancelRef = useRef<HTMLButtonElement>(null!)
 
   // ── Fetch course detail ─────────────────────────────────────────────────────
   const { data: courseDto, isLoading, isError, error } = useQuery<CourseDetailDto, Error>({
@@ -60,7 +62,19 @@ export function EditCoursePage() {
     },
   })
 
-  const handleSave = () => mutation.mutate(buildUpdatePayload(state))
+  // If the course is published, open the archive confirm dialog; otherwise save immediately
+  const handleSaveClick = () => {
+    if (state.isVersionPublished) {
+      setArchiveDialogOpen(true)
+    } else {
+      mutation.mutate(buildUpdatePayload(state, false))
+    }
+  }
+
+  const handleConfirmSave = (archivePreviousVersion: boolean) => {
+    setArchiveDialogOpen(false)
+    mutation.mutate(buildUpdatePayload(state, archivePreviousVersion))
+  }
 
   // ── Loading / error states ─────────────────────────────────────────────────
   if (isLoading) {
@@ -78,6 +92,7 @@ export function EditCoursePage() {
 
   // ── Two-column layout ──────────────────────────────────────────────────────
   return (
+    <>
     <div className="flex gap-0 -m-6 min-h-full">
 
       {/* ── Left: sticky structure panel ───────────────────────────────────── */}
@@ -139,7 +154,7 @@ export function EditCoursePage() {
             >
               Cancel
             </button>
-            <Button type="button" onClick={handleSave} disabled={mutation.isPending}>
+            <Button type="button" onClick={handleSaveClick} disabled={mutation.isPending}>
               {mutation.isPending ? 'Saving…' : 'Save Changes'}
             </Button>
           </div>
@@ -153,7 +168,7 @@ export function EditCoursePage() {
               {(mutation.error as Error)?.message ?? 'Save failed.'}
             </div>
           )}
-          {mutation.isSuccess && courseDto?.status === 'NewVersionCreated' && (
+          {mutation.isSuccess && mutation.data?.status === 'NewVersionCreated' && (
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md text-sm text-blue-700">
               The previous version was published. A new draft version has been created with your changes.
             </div>
@@ -162,44 +177,100 @@ export function EditCoursePage() {
           {/* Content: course info form or chapter editor */}
           {selectedNode === null ? (
             /* Course Info form */
-            <div className="max-w-2xl space-y-5">
-              <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
-                <h2 className="text-sm font-semibold text-gray-800">Course Info</h2>
+            <div className="max-w-2xl mx-auto space-y-5">
+              <div className="card p-5 xl:p-6 space-y-5">
+                <h2 className="text-base font-semibold text-gray-800">Course Info</h2>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                  <label className="form-label">
                     Title <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={state.title}
                     onChange={(e) => dispatch({ type: 'SET_TITLE', title: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="form-input"
                     placeholder="Course title"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                  <label className="form-label">Description</label>
                   <textarea
                     rows={4}
                     value={state.description}
                     onChange={(e) => dispatch({ type: 'SET_DESCRIPTION', description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                    className="form-textarea"
                     placeholder="Brief course description"
                   />
                 </div>
+                <div>
+                  <label className="form-label">Status</label>
+                  <select
+                    value={state.status}
+                    onChange={(e) => dispatch({ type: 'SET_STATUS', status: e.target.value })}
+                    className="form-select"
+                  >
+                    <option value="Draft">Draft</option>
+                    <option value="Published">Published</option>
+                    <option value="Archived">Archived</option>
+                  </select>
+                </div>
               </div>
-              <p className="text-xs text-gray-400">
+              <p className="text-theme-xs text-gray-400">
                 Select a chapter or section in the tree on the left to edit its content.
               </p>
             </div>
           ) : (
             /* Chapter / Section editor */
-            <div className="max-w-2xl">
+            <div className="max-w-2xl mx-auto">
               <EditChapterEditor node={selectedNode} dispatch={dispatch} />
             </div>
           )}
         </div>
       </div>
     </div>
+
+      {/* ── Archive confirm dialog ──────────────────────────────────────────────── */}
+      {archiveDialogOpen && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setArchiveDialogOpen(false)}
+          />
+          <div className="relative bg-white rounded-xl shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Save Published Course</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              This course is currently <strong>Published</strong>. Saving will create a new
+              draft version (v{(courseDto?.activeVersionNumber ?? 0) + 1}) and reset the
+              course status to <strong>Draft</strong>.
+              <br /><br />
+              Do you want to <strong>archive</strong> the current published version?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                ref={cancelRef}
+                onClick={() => setArchiveDialogOpen(false)}
+                className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleConfirmSave(false)}
+                disabled={mutation.isPending}
+                className="px-4 py-2 text-sm text-gray-700 bg-gray-100 border border-gray-200 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+              >
+                {mutation.isPending ? 'Saving…' : 'Save without archiving'}
+              </button>
+              <button
+                onClick={() => handleConfirmSave(true)}
+                disabled={mutation.isPending}
+                className="px-4 py-2 text-sm text-white bg-brand-500 rounded-lg hover:bg-brand-600 disabled:opacity-50"
+              >
+                {mutation.isPending ? 'Saving…' : 'Archive & Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

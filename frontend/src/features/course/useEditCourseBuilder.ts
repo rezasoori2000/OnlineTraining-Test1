@@ -74,6 +74,7 @@ export function initEditState(dto: CourseDetailDto): EditCourseFormState {
     title: dto.title,
     description: dto.description ?? '',
     languageCode: dto.languageCode,
+    status: dto.status,
     activeVersionId: dto.activeVersionId,
     isVersionPublished: dto.isVersionPublished,
     isCourseInfoDirty: false,
@@ -87,6 +88,7 @@ export type EditBuilderAction =
   | { type: 'RESET'; dto: CourseDetailDto }
   | { type: 'SET_TITLE'; title: string }
   | { type: 'SET_DESCRIPTION'; description: string }
+  | { type: 'SET_STATUS'; status: string }
   | { type: 'ADD_ROOT_CHAPTER' }
   | { type: 'ADD_CHILD'; parentClientId: string }
   | { type: 'DELETE_CHAPTER'; clientId: string }
@@ -217,6 +219,9 @@ function reducer(state: EditCourseFormState, action: EditBuilderAction): EditCou
 
     case 'SET_DESCRIPTION':
       return { ...state, description: action.description, isCourseInfoDirty: true }
+
+    case 'SET_STATUS':
+      return { ...state, status: action.status, isCourseInfoDirty: true }
 
     case 'ADD_ROOT_CHAPTER':
       return {
@@ -535,7 +540,7 @@ function walkNodes(
   }
 }
 
-export function buildUpdatePayload(state: EditCourseFormState): UpdateCourseRequest {
+export function buildUpdatePayload(state: EditCourseFormState, archivePreviousVersion = false): UpdateCourseRequest {
   const result = {
     deletedNodeIds: [] as string[],
     newNodes: [] as NewNodeDto[],
@@ -553,7 +558,9 @@ export function buildUpdatePayload(state: EditCourseFormState): UpdateCourseRequ
       title: state.title,
       description: state.description || null,
       languageCode: state.languageCode,
+      status: state.status,
     },
+    archivePreviousVersion,
     ...result,
   }
 }

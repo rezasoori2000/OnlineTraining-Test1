@@ -85,23 +85,23 @@ export function CreateCoursePage() {
   const isSubmitting = mutation.isPending
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-3xl space-y-8">
+    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto space-y-6">
       {/* Page header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Create Course</h2>
+        <h2 className="text-title-sm font-bold text-gray-900">Create Course</h2>
         <Button type="button" variant="secondary" onClick={() => navigate('/courses')}>
           Cancel
         </Button>
       </div>
 
-      {/* Course info */}
-      <section className="space-y-4">
-        <h3 className="text-base font-semibold text-gray-700 border-b pb-1">
+      {/* Course info card */}
+      <div className="card p-5 xl:p-6 space-y-5">
+        <h3 className="text-base font-semibold text-gray-800">
           Course Information
         </h3>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="form-label">
             Title <span className="text-red-500">*</span>
           </label>
           <input
@@ -110,12 +110,12 @@ export function CreateCoursePage() {
             onChange={(e) => dispatch({ type: 'SET_TITLE', title: e.target.value })}
             placeholder="Enter course title"
             maxLength={500}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="form-input"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="form-label">
             Description <span className="text-red-500">*</span>
           </label>
           <textarea
@@ -126,28 +126,26 @@ export function CreateCoursePage() {
             placeholder="Enter course description"
             rows={4}
             maxLength={2000}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="form-textarea"
           />
         </div>
-      </section>
+      </div>
 
-      {/* Chapter tree */}
-      <section className="space-y-3">
-        <h3 className="text-base font-semibold text-gray-700 border-b pb-1">
-          Chapters
-        </h3>
+      {/* Chapter tree card */}
+      <div className="card p-5 xl:p-6 space-y-4">
+        <h3 className="text-base font-semibold text-gray-800">Chapters</h3>
         <ChapterTreeBuilder chapters={state.chapters} dispatch={dispatch} />
-      </section>
+      </div>
 
       {/* Error */}
       {(submitError) && (
-        <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">
+        <p className="text-theme-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
           {submitError}
         </p>
       )}
 
       {/* Submit */}
-      <div className="pt-2">
+      <div className="pt-1">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? 'Saving…' : 'Save Course'}
         </Button>

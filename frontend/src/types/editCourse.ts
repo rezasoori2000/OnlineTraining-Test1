@@ -96,6 +96,7 @@ export interface EditCourseFormState {
   title: string
   description: string
   languageCode: string
+  status: string
   activeVersionId: string
   isVersionPublished: boolean
   isCourseInfoDirty: boolean
@@ -152,10 +153,12 @@ export interface UpdateCourseInfoDto {
   title: string
   description: string | null
   languageCode: string
+  status: string
 }
 
 export interface UpdateCourseRequest {
   courseInfo: UpdateCourseInfoDto
+  archivePreviousVersion: boolean
   updatedNodes: UpdatedNodeDto[]
   newNodes: NewNodeDto[]
   deletedNodeIds: string[]
