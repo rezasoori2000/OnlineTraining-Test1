@@ -53,7 +53,7 @@ let pptxLibsLoaded = false
 
 function loadScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${CSS.escape(src)}"]`)) {
+    if (document.querySelector(`script[src="${src}"]`)) {
       resolve()
       return
     }
@@ -65,39 +65,45 @@ function loadScript(src: string): Promise<void> {
   })
 }
 
-/** Polyfill for FileReaderJS — required by pptxjs but not available standalone.
- *  Uses the native FileReader API so no additional library is needed. */
-function injectFileReaderJSPolyfill(): void {
-  if ((window as unknown as Record<string, unknown>)['FileReaderJS']) return
-  ;(window as unknown as Record<string, unknown>)['FileReaderJS'] = {
-    setSync: () => {},
-    setupBlob: (
-      blob: Blob,
-      opts: { readAsDefault: string; on: { load: (e: ProgressEvent<FileReader>, file: Blob) => void } },
-    ) => {
-      const reader = new FileReader()
-      reader.onload = (e) => opts.on.load(e, blob)
-      reader.readAsArrayBuffer(blob)
-    },
-  }
+function loadCss(href: string): void {
+  if (document.querySelector(`link[href="${href}"]`)) return
+  const link = document.createElement('link')
+  link.rel = 'stylesheet'
+  link.href = href
+  document.head.appendChild(link)
 }
 
 async function ensurePptxLibs(): Promise<void> {
   if (pptxLibsLoaded) return
 
-  // jQuery is required by the pptxjs plugin
-  await loadScript('https://code.jquery.com/jquery-3.7.1.min.js')
+  // CSS required for correct slide rendering
+  loadCss('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@master/css/pptxjs.css')
+  loadCss('https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.6/nv.d3.min.css')
 
-  // jszip and pptxjs from our public/libs folder (copied from contentconverter-example)
-  // Note: JSZipUtils is bundled inside pptxjs.js; FileReaderJS is polyfilled below.
+  // jQuery 1.11.3 — PPTXjs was built for jQuery 1.x, does NOT work with 3.x
+  await loadScript('https://code.jquery.com/jquery-1.11.3.min.js')
+
+  // JSZip v2 (local copies in public/libs)
   await loadScript('/libs/jszip.js')
   await loadScript('/libs/jszip-inflate.js')
   await loadScript('/libs/jszip-deflate.js')
   await loadScript('/libs/jszip-load.js')
+
+  // Real filereader.js from CDN (PPTXjs needs this to read File objects)
+  await loadScript('https://cdn.jsdelivr.net/gh/meshesha/filereader.js@master/filereader.js')
+
+  // D3 + NVD3 for chart slides
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js')
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.6/nv.d3.min.js')
+
+  // Dingbat font helper
+  await loadScript('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@master/js/dingbat.js')
+
+  // PPTXjs core (local)
   await loadScript('/libs/pptxjs.js')
 
-  // Must be injected after pptxjs loads (and before pptxToHtml is called)
-  injectFileReaderJSPolyfill()
+  // Slideshow plugin
+  await loadScript('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@master/js/divs2slides.js')
 
   pptxLibsLoaded = true
 }

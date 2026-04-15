@@ -7,6 +7,7 @@ import { EditCoursePage } from '@/pages/courses/EditCoursePage'
 import { FoldersPage } from '@/pages/folders/FoldersPage'
 import { CreateFolderPage } from '@/pages/folders/CreateFolderPage'
 import { EditFolderPage } from '@/pages/folders/EditFolderPage'
+import { FileConverterPage } from '@/pages/tools/FileConverterPage'
 
 export function AppRoutes() {
   return (
@@ -20,6 +21,7 @@ export function AppRoutes() {
         <Route path="/folders" element={<FoldersPage />} />
         <Route path="/folders/create" element={<CreateFolderPage />} />
         <Route path="/folders/:id" element={<EditFolderPage />} />
+        <Route path="/file-converter" element={<FileConverterPage />} />
       </Route>
     </Routes>
   )

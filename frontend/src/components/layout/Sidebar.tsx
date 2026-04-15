@@ -24,6 +24,13 @@ const FoldersIcon = () => (
   </svg>
 )
 
+const ConverterIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    <path d="M14 2v6h6M9 15l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
 type NavItem = {
   name: string
   icon: React.ReactNode
@@ -34,6 +41,7 @@ const navItems: NavItem[] = [
   { icon: <DashboardIcon />, name: 'Dashboard', path: '/dashboard' },
   { icon: <CoursesIcon />, name: 'Courses', path: '/courses' },
   { icon: <FoldersIcon />, name: 'Folders', path: '/folders' },
+  { icon: <ConverterIcon />, name: 'File Converter', path: '/file-converter' },
 ]
 
 export function Sidebar() {

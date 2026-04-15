@@ -35,10 +35,71 @@ async function convertPdf(source) {
   return pages;
 }
 
+// ─── PPTX library loading ─────────────────────────────────────────────────────
+
+let pptxLibsLoaded = false;
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error(`Failed to load: ${src}`));
+    document.head.appendChild(s);
+  });
+}
+
+function loadCss(href) {
+  if (document.querySelector(`link[href="${href}"]`)) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = href;
+  document.head.appendChild(link);
+}
+
+async function ensurePptxLibs() {
+  if (pptxLibsLoaded) return;
+
+  // CSS required for correct slide rendering
+  loadCss('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@master/css/pptxjs.css');
+  loadCss('https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.6/nv.d3.min.css');
+
+  // jQuery 1.11.3 — PPTXjs was built for jQuery 1.x, does NOT work with 3.x
+  await loadScript('https://code.jquery.com/jquery-1.11.3.min.js');
+
+  // JSZip v2 (local copies)
+  await loadScript('/libs/jszip.js');
+  await loadScript('/libs/jszip-inflate.js');
+  await loadScript('/libs/jszip-deflate.js');
+  await loadScript('/libs/jszip-load.js');
+
+  // Real filereader.js from CDN (PPTXjs needs this to read File objects)
+  await loadScript('https://cdn.jsdelivr.net/gh/meshesha/filereader.js@master/filereader.js');
+
+  // D3 + NVD3 for chart slides
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js');
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/nvd3/1.8.6/nv.d3.min.js');
+
+  // Dingbat font helper
+  await loadScript('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@master/js/dingbat.js');
+
+  // PPTXjs core (local)
+  await loadScript('/libs/pptxjs.js');
+
+  // Slideshow plugin
+  await loadScript('https://cdn.jsdelivr.net/gh/meshesha/PPTXjs@master/js/divs2slides.js');
+
+  pptxLibsLoaded = true;
+}
+
 // ─── PPTX conversion ──────────────────────────────────────────────────────────
 
 function convertPptx(file) {
-  return new Promise((resolve, reject) => {
+  return ensurePptxLibs().then(() => new Promise((resolve, reject) => {
+    if (!window.$) { reject(new Error('jQuery failed to load.')); return; }
+    // pptxjs calls file_name.split('.') internally — it MUST receive a string URL
+    const blobUrl = URL.createObjectURL(file);
     const containerId = 'pptx-fc-' + Date.now() + '-' + Math.random().toString(36).slice(2);
     const container = document.createElement('div');
     container.id = containerId;
@@ -56,6 +117,7 @@ function convertPptx(file) {
       if (container.parentNode) document.body.removeChild(container);
       window.removeEventListener('error', onWindowError);
       clearTimeout(timer);
+      URL.revokeObjectURL(blobUrl);
     };
 
     const onWindowError = (evt) => {
@@ -79,7 +141,7 @@ function convertPptx(file) {
 
     try {
       window.$(container).pptxToHtml({
-        pptxFileUrl: file,
+        pptxFileUrl: blobUrl,
         fileInputId: null,
         slidesScale: '100%',
         slideMode: false,
@@ -98,7 +160,7 @@ function convertPptx(file) {
       cleanup();
       reject(err);
     }
-  });
+  }));
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
@@ -222,6 +284,12 @@ export default function FileConverter() {
         const resultNode = await convertPptx(file);
         if (pptxRef.current) {
           pptxRef.current.innerHTML = '';
+          // Reset the off-screen positioning from the render container
+          resultNode.style.position = '';
+          resultNode.style.left = '';
+          resultNode.style.top = '';
+          resultNode.style.pointerEvents = '';
+          resultNode.style.width = '';
           pptxRef.current.appendChild(resultNode);
         }
         setStatus('done');

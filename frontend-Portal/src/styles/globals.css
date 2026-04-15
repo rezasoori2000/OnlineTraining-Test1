@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-outfit bg-gray-50 text-gray-900 text-sm font-normal;
+  }
+}
+
+/* Isolate PPTXjs-generated HTML from Tailwind base resets */
+.pptx-html-content {
+  all: initial;
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+}
+.pptx-html-content * {
+  box-sizing: border-box;
+}
