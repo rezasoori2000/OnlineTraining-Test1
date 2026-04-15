@@ -12,6 +12,7 @@ public static class DependencyInjection
         services.AddScoped<CourseUpdateService>();
         services.AddScoped<ChapterService>();
         services.AddScoped<FullCourseCreationService>();
+        services.AddScoped<FolderService>();
         return services;
     }
 }

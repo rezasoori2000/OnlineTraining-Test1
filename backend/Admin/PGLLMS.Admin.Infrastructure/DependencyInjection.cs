@@ -38,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<AppInterfaces.IChapterRepository, ChapterRepository>();
         services.AddScoped<AppInterfaces.IChapterContentRepository, ChapterContentRepository>();
         services.AddScoped<AppInterfaces.IQuizRepository, QuizRepository>();
+        services.AddScoped<AppInterfaces.IFolderRepository, FolderRepository>();
 
         services.AddSingleton<AppInterfaces.IHtmlSanitizer, GanssHtmlSanitizer>();
 

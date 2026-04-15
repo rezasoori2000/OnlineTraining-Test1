@@ -18,6 +18,12 @@ const CoursesIcon = () => (
   </svg>
 )
 
+const FoldersIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+  </svg>
+)
+
 type NavItem = {
   name: string
   icon: React.ReactNode
@@ -27,6 +33,7 @@ type NavItem = {
 const navItems: NavItem[] = [
   { icon: <DashboardIcon />, name: 'Dashboard', path: '/dashboard' },
   { icon: <CoursesIcon />, name: 'Courses', path: '/courses' },
+  { icon: <FoldersIcon />, name: 'Folders', path: '/folders' },
 ]
 
 export function Sidebar() {

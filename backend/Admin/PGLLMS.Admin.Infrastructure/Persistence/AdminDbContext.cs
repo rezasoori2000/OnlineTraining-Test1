@@ -27,6 +27,9 @@ public class AdminDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<StudySession> StudySessions => Set<StudySession>();
     public DbSet<Tag> Tags => Set<Tag>();
     public DbSet<Attachment> Attachments => Set<Attachment>();
+    public DbSet<Folder> Folders => Set<Folder>();
+    public DbSet<FolderAttribute> FolderAttributes => Set<FolderAttribute>();
+    public DbSet<FolderCourse> FolderCourses => Set<FolderCourse>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
