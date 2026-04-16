@@ -12,6 +12,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // Portal Services
 builder.Services.AddScoped<PortalFolderService>();
 builder.Services.AddScoped<PortalCourseService>();
+builder.Services.AddScoped<RagChatService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

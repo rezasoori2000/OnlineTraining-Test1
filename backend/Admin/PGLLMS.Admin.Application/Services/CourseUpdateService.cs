@@ -24,6 +24,7 @@ public class CourseUpdateService
     private readonly IQuizRepository _quizRepository;
     private readonly IHtmlSanitizer _htmlSanitizer;
     private readonly CourseDetailService _courseDetailService;
+    private readonly IEmbeddingService _embeddingService;
 
     public CourseUpdateService(
         ICourseRepository courseRepository,
@@ -32,7 +33,8 @@ public class CourseUpdateService
         IChapterContentRepository contentRepository,
         IQuizRepository quizRepository,
         IHtmlSanitizer htmlSanitizer,
-        CourseDetailService courseDetailService)
+        CourseDetailService courseDetailService,
+        IEmbeddingService embeddingService)
     {
         _courseRepository = courseRepository;
         _versionRepository = versionRepository;
@@ -41,6 +43,7 @@ public class CourseUpdateService
         _quizRepository = quizRepository;
         _htmlSanitizer = htmlSanitizer;
         _courseDetailService = courseDetailService;
+        _embeddingService = embeddingService;
     }
 
     public async Task<ServiceResult<CourseDetailDto>> UpdateAsync(
@@ -120,11 +123,13 @@ public class CourseUpdateService
         }
 
         // ── 4b. Update course status (if supplied and not overridden by new-version logic) ────
+        bool courseWasArchived = false;
         if (!isNewVersion &&
             request.CourseInfo.Status is not null &&
             Enum.TryParse<CourseStatus>(request.CourseInfo.Status, ignoreCase: true, out var parsedStatus))
         {
             course.Status = parsedStatus;
+            courseWasArchived = parsedStatus == CourseStatus.Archived;
         }
 
         // ── 5. Soft-delete removed chapters ───────────────────────────────────
@@ -229,7 +234,9 @@ public class CourseUpdateService
 
         // ── 10. Single SaveChangesAsync ───────────────────────────────────────
         await _courseRepository.SaveChangesAsync(ct);
-
+        // Delete vectors when a course is archived
+        if (courseWasArchived)
+            await _embeddingService.DeleteByCourseAsync(courseId, ct);
         // ── 11. Return fresh detail via CourseDetailService re-fetch ─────────
         var getResult = await _courseDetailService.GetAsync(courseId, ct);
         if (!getResult.Succeeded)

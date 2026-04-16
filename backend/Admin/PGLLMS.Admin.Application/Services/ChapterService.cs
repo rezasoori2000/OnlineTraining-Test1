@@ -11,17 +11,20 @@ public class ChapterService
     private readonly IChapterContentRepository _contentRepository;
     private readonly ICourseVersionRepository _versionRepository;
     private readonly IHtmlSanitizer _htmlSanitizer;
+    private readonly IEmbeddingService _embeddingService;
 
     public ChapterService(
         IChapterRepository chapterRepository,
         IChapterContentRepository contentRepository,
         ICourseVersionRepository versionRepository,
-        IHtmlSanitizer htmlSanitizer)
+        IHtmlSanitizer htmlSanitizer,
+        IEmbeddingService embeddingService)
     {
         _chapterRepository = chapterRepository;
         _contentRepository = contentRepository;
         _versionRepository = versionRepository;
         _htmlSanitizer = htmlSanitizer;
+        _embeddingService = embeddingService;
     }
 
     public async Task<ServiceResult<ChapterResponse>> AddChapterAsync(
@@ -99,6 +102,15 @@ public class ChapterService
 
         await _contentRepository.AddAsync(content, ct);
         await _contentRepository.SaveChangesAsync(ct);
+
+        // Embed content for RAG search (non-critical — errors are swallowed inside service)
+        var courseVersion = await _versionRepository.GetByIdAsync(chapter.CourseVersionId, ct);
+        if (courseVersion is not null)
+        {
+            var chapterTitle = chapter.Translations.FirstOrDefault()?.Title ?? "Untitled";
+            await _embeddingService.UpsertChapterAsync(
+                chapter.Id, courseVersion.CourseId, chapterTitle, sanitizedHtml, ct);
+        }
 
         return ServiceResult<ChapterContentResponse>.Success(MapContentToResponse(content));
     }

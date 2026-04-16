@@ -3,6 +3,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CoursePage } from '@/components/CoursePage'
 import type { FolderDetail } from '@/types/portal'
 import { MainPage } from './components/MainPage'
+import { FloatingChat } from './components/FloatingChat'
+import { ChatPage } from './components/ChatPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,30 +24,43 @@ export function App() {
   )
 }
 
-type Page = { type: 'main' } | { type: 'course'; courseId: string; courseTitle: string }
+type Page = { type: 'main' } | { type: 'course'; courseId: string; courseTitle: string } | { type: 'chat' }
 
 function PortalRouter() {
   const [page, setPage] = useState<Page>({ type: 'main' })
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
 
-  if (page.type === 'course') {
-    return (
-      <CoursePage
-        courseId={page.courseId}
-        courseTitle={page.courseTitle}
-        onBack={() => setPage({ type: 'main' })}
-      />
-    )
-  }
+  const goMain = () => setPage({ type: 'main' })
 
   return (
-    <MainPage
-      selectedFolderId={selectedFolderId}
-      onFolderSelect={setSelectedFolderId}
-      onCourseOpen={(courseId, courseTitle) =>
-        setPage({ type: 'course', courseId, courseTitle })
-      }
-    />
+    <>
+      {page.type === 'chat' && (
+        <ChatPage onBack={goMain} />
+      )}
+
+      {page.type === 'course' && (
+        <CoursePage
+          courseId={page.courseId}
+          courseTitle={page.courseTitle}
+          onBack={goMain}
+        />
+      )}
+
+      {page.type === 'main' && (
+        <MainPage
+          selectedFolderId={selectedFolderId}
+          onFolderSelect={setSelectedFolderId}
+          onCourseOpen={(courseId, courseTitle) =>
+            setPage({ type: 'course', courseId, courseTitle })
+          }
+        />
+      )}
+
+      {/* Floating chat available on all pages except the full chat page */}
+      {page.type !== 'chat' && (
+        <FloatingChat onOpenFullPage={() => setPage({ type: 'chat' })} />
+      )}
+    </>
   )
 }
 

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Identity;
 using PGLLMS.Admin.Domain.Identity;
+using PGLLMS.Admin.Infrastructure.Ai;
 using PGLLMS.Admin.Infrastructure.Persistence;
 using PGLLMS.Admin.Infrastructure.Repositories;
 using PGLLMS.Admin.Infrastructure.Security;
@@ -41,6 +42,25 @@ public static class DependencyInjection
         services.AddScoped<AppInterfaces.IFolderRepository, FolderRepository>();
 
         services.AddSingleton<AppInterfaces.IHtmlSanitizer, GanssHtmlSanitizer>();
+
+        // ── AI / RAG ──────────────────────────────────────────────────────────
+        services.Configure<AiSettings>(configuration.GetSection(AiSettings.SectionName));
+
+        services.AddHttpClient("Ollama", client =>
+        {
+            client.BaseAddress = new Uri(
+                configuration["Ai:OllamaBaseUrl"] ?? "http://localhost:11434");
+            client.Timeout = TimeSpan.FromSeconds(120);
+        });
+
+        services.AddHttpClient("Qdrant", client =>
+        {
+            client.BaseAddress = new Uri(
+                configuration["Ai:QdrantBaseUrl"] ?? "http://localhost:6333");
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+
+        services.AddScoped<AppInterfaces.IEmbeddingService, EmbeddingService>();
 
         return services;
     }

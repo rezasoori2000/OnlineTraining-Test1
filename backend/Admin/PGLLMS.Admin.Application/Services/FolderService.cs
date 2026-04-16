@@ -9,11 +9,16 @@ public class FolderService
 {
     private readonly IFolderRepository _folderRepository;
     private readonly ICourseRepository _courseRepository;
+    private readonly IEmbeddingService _embeddingService;
 
-    public FolderService(IFolderRepository folderRepository, ICourseRepository courseRepository)
+    public FolderService(
+        IFolderRepository folderRepository,
+        ICourseRepository courseRepository,
+        IEmbeddingService embeddingService)
     {
         _folderRepository = folderRepository;
         _courseRepository = courseRepository;
+        _embeddingService = embeddingService;
     }
 
     public async Task<List<FolderListItemDto>> GetAllFoldersAsync(CancellationToken ct = default)
@@ -188,6 +193,11 @@ public class FolderService
         }
 
         await _folderRepository.SaveChangesAsync(ct);
+
+        // Embed folder HTML content if present
+        if (!string.IsNullOrWhiteSpace(folder.HtmlContent))
+            await _embeddingService.UpsertFolderAsync(folder.Id, folder.Name, folder.HtmlContent, ct);
+
         return await GetFolderAsync(folder.Id, ct);
     }
 
