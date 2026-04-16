@@ -18,6 +18,11 @@ public class ChapterRepository : IChapterRepository
         => await _context.Chapters
             .FirstOrDefaultAsync(c => c.Id == id, ct);
 
+    public async Task<Chapter?> GetByIdWithTranslationsAsync(Guid id, CancellationToken ct = default)
+        => await _context.Chapters
+            .Include(c => c.Translations)
+            .FirstOrDefaultAsync(c => c.Id == id, ct);
+
     public async Task<List<Chapter>> GetFullByVersionAsync(Guid versionId, CancellationToken ct = default)
         => await _context.Chapters
             .Where(c => c.CourseVersionId == versionId)

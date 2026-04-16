@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/Button'
 import { apiClient } from '@/services/api/apiClient'
 import {
   FolderDetail,
-  FolderTreeNode,
   UpdateFolderRequest,
   FolderAttributeRequest,
   AssignCourseRequest,
@@ -13,79 +12,6 @@ import {
 import { Course } from '@/types/course'
 import { cn } from '@/utils/helpers'
 import { convertFileToHtml } from '@/utils/convertFileToHtml'
-
-/* ── Folder tree node component ── */
-
-function TreeNode({
-  node,
-  selectedId,
-  depth = 0,
-}: {
-  node: FolderTreeNode
-  selectedId: string
-  depth?: number
-}) {
-  const [expanded, setExpanded] = useState(true)
-  const isSelected = node.id === selectedId
-  const hasChildren = node.children.length > 0
-
-  return (
-    <div>
-      <div
-        className={cn(
-          'flex items-center gap-1 px-2 py-1.5 rounded text-theme-sm transition-colors',
-          isSelected
-            ? 'bg-brand-50 text-brand-700 font-medium'
-            : 'text-gray-700',
-        )}
-        style={{ paddingLeft: `${depth * 16 + 8}px` }}
-      >
-        {hasChildren ? (
-          <button
-            className="flex-shrink-0 w-4 h-4 flex items-center justify-center text-gray-400 hover:text-gray-600"
-            onClick={() => setExpanded(!expanded)}
-          >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-              className={cn('transition-transform', expanded ? 'rotate-90' : '')}
-              fill="currentColor"
-            >
-              <path d="M4.5 2L8.5 6L4.5 10V2Z" />
-            </svg>
-          </button>
-        ) : (
-          <span className="w-4" />
-        )}
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          className="flex-shrink-0"
-        >
-          <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-        </svg>
-        <span className="truncate">{node.name}</span>
-      </div>
-      {hasChildren && expanded && (
-        <div>
-          {node.children.map((child) => (
-            <TreeNode
-              key={child.id}
-              node={child}
-              selectedId={selectedId}
-              depth={depth + 1}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 
 /* ── Main page ── */
 
@@ -116,12 +42,6 @@ export function EditFolderPage() {
     queryKey: ['folder', id],
     queryFn: () => apiClient.get<FolderDetail>(`/folders/${id}`),
     enabled: !!id,
-  })
-
-  // Fetch full tree
-  const { data: tree = [] } = useQuery<FolderTreeNode[]>({
-    queryKey: ['folders-tree'],
-    queryFn: () => apiClient.get<FolderTreeNode[]>('/folders/tree'),
   })
 
   // Fetch all courses for assignment
@@ -247,7 +167,7 @@ export function EditFolderPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 ">
       <div className="flex items-center justify-between">
         <h2 className="text-title-sm font-bold text-gray-900">Edit Folder</h2>
         <Button variant="secondary" onClick={() => navigate('/folders')}>
@@ -261,29 +181,9 @@ export function EditFolderPage() {
         </div>
       )}
 
-      <div className="flex gap-6">
-        {/* Left: Folder tree */}
-        <div className="w-72 flex-shrink-0">
-          <div className="card p-4 sticky top-24 max-h-[calc(100vh-120px)] overflow-y-auto">
-            <h3 className="text-theme-sm font-semibold text-gray-600 uppercase tracking-wider mb-3">
-              Folder Tree
-            </h3>
-            {tree.length === 0 ? (
-              <p className="text-theme-sm text-gray-400">No folders yet.</p>
-            ) : (
-              tree.map((root) => (
-                <TreeNode
-                  key={root.id}
-                  node={root}
-                  selectedId={id!}
-                />
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Right: Edit form */}
-        <div className="flex-1 space-y-6">
+      <div>
+        {/* Edit form */}
+        <div className="space-y-6 ">
           {/* Basic info */}
           <div className="card p-5 xl:p-6 space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Folder Info</h3>
@@ -369,82 +269,6 @@ export function EditFolderPage() {
             </div>
           </div>
 
-          {/* Content — collapsible */}
-          <div className="card overflow-hidden">
-            <button
-              className="w-full flex items-center justify-between p-5 xl:px-6 text-left hover:bg-gray-50 transition-colors"
-              onClick={() => setContentCollapsed(!contentCollapsed)}
-            >
-              <h3 className="text-lg font-semibold text-gray-900">Content</h3>
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                className={cn(
-                  'text-gray-400 transition-transform',
-                  contentCollapsed ? '' : 'rotate-180',
-                )}
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </button>
-
-            {!contentCollapsed && (
-              <div className="px-5 xl:px-6 pb-5 xl:pb-6 space-y-4 border-t border-gray-100 pt-4">
-                {/* Import button */}
-                <div className="flex items-center gap-3">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.pptx,.ppt"
-                    onChange={handleFileImport}
-                    className="hidden"
-                  />
-                  <Button
-                    variant="secondary"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isConverting}
-                  >
-                    {isConverting ? 'Converting…' : 'Import PPTX / PDF'}
-                  </Button>
-                  {isConverting && (
-                    <span className="text-theme-sm text-gray-500">
-                      Converting file to HTML…
-                    </span>
-                  )}
-                </div>
-
-                {/* HTML textarea */}
-                <div>
-                  <label className="form-label">HTML Content</label>
-                  <textarea
-                    value={htmlContent}
-                    onChange={(e) => setHtmlContent(e.target.value)}
-                    className="form-textarea w-full font-mono text-xs"
-                    rows={10}
-                    placeholder="Enter HTML content or import a file…"
-                  />
-                </div>
-
-                {/* HTML preview */}
-                {htmlContent && (
-                  <div>
-                    <label className="form-label">Preview</label>
-                    <div
-                      className="border border-gray-200 rounded-lg p-4 bg-white max-h-[500px] overflow-y-auto"
-                      dangerouslySetInnerHTML={{ __html: htmlContent }}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
           {/* Assigned Courses */}
           <div className="card p-5 xl:p-6 space-y-4">
             <div className="flex items-center justify-between">
@@ -516,11 +340,23 @@ export function EditFolderPage() {
           </div>
 
           {/* Children */}
-          {folder.children.length > 0 && (
-            <div className="card p-5 xl:p-6 space-y-4">
+          <div className="card p-5 xl:p-6 space-y-4">
+            <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">
                 Children Folders
               </h3>
+              <Button
+                variant="secondary"
+                onClick={() => navigate(`/folders/create?parentId=${id}`)}
+              >
+                + Create Child Folder
+              </Button>
+            </div>
+            {folder.children.length === 0 ? (
+              <p className="text-theme-sm text-gray-400 py-4">
+                No child folders yet.
+              </p>
+            ) : (
               <div className="overflow-x-auto rounded-lg border border-gray-200">
                 <table className="min-w-full divide-y divide-gray-200 bg-white text-sm">
                   <thead className="bg-gray-50">
@@ -556,8 +392,84 @@ export function EditFolderPage() {
                   </tbody>
                 </table>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+
+          {/* Content — collapsible */}
+          <div className="card ">
+            <button
+              className="w-full flex items-center justify-between p-5 xl:px-6 text-left hover:bg-gray-50 transition-colors"
+              onClick={() => setContentCollapsed(!contentCollapsed)}
+            >
+              <h3 className="text-lg font-semibold text-gray-900">Content</h3>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                className={cn(
+                  'text-gray-400 transition-transform',
+                  contentCollapsed ? '' : 'rotate-180',
+                )}
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
+
+            {!contentCollapsed && (
+              <div className="px-5 xl:px-6 pb-5 xl:pb-6 space-y-4 border-t border-gray-100 pt-4">
+                {/* Import button */}
+                <div className="flex items-center gap-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.pptx,.ppt"
+                    onChange={handleFileImport}
+                    className="hidden"
+                  />
+                  <Button
+                    variant="secondary"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isConverting}
+                  >
+                    {isConverting ? 'Converting…' : 'Import PPTX / PDF'}
+                  </Button>
+                  {isConverting && (
+                    <span className="text-theme-sm text-gray-500">
+                      Converting file to HTML…
+                    </span>
+                  )}
+                </div>
+
+                {/* HTML textarea */}
+                <div>
+                  <label className="form-label">HTML Content</label>
+                  <textarea
+                    value={htmlContent}
+                    onChange={(e) => setHtmlContent(e.target.value)}
+                    className="form-textarea w-full font-mono text-xs overflow-x-hidden"
+                    rows={10}
+                    placeholder="Enter HTML content or import a file…"
+                  />
+                </div>
+
+                {/* HTML preview */}
+                {htmlContent && (
+                  <div>
+                    <label className="form-label">Preview</label>
+                    <div
+                      className="border border-gray-200 rounded-lg p-4 bg-white max-h-[500px] overflow-x-hidden overflow-y-auto"
+                      dangerouslySetInnerHTML={{ __html: htmlContent }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

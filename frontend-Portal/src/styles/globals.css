@@ -3,6 +3,12 @@
 @tailwind utilities;
 
 @layer base {
+  html, body, #root {
+    height: 100%;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+  }
   body {
     @apply font-outfit bg-gray-50 text-gray-900 text-sm font-normal;
   }
@@ -13,7 +19,6 @@
   all: initial;
   display: block;
   width: 100%;
-  overflow-x: auto;
 }
 .pptx-html-content * {
   box-sizing: border-box;

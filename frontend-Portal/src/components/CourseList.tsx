@@ -17,9 +17,7 @@ export function CourseList({ courses, selectedCourseId, onSelect }: CourseListPr
 
   return (
     <div className="overflow-y-auto h-full">
-      <div className="p-3 border-b border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-700">Courses</h3>
-      </div>
+
       <div className="divide-y divide-gray-100">
         {courses.map(course => (
           <div

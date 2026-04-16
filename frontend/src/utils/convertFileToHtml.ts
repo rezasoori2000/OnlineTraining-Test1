@@ -150,7 +150,7 @@ function convertPptxToHtml(file: File): Promise<string> {
             settled = true
             const html = container.innerHTML
             cleanup()
-            resolve(`<div class="pptx-content">${html}</div>`)
+            resolve(`<div class="pptx-content ">${html}</div>`)
           }
         }, 20_000)
 
@@ -166,7 +166,7 @@ function convertPptxToHtml(file: File): Promise<string> {
                 settled = true
                 const html = container.innerHTML
                 cleanup()
-                resolve(`<div class="pptx-content">${html}</div>`)
+                resolve(`<div class="pptx-content ">${html}</div>`)
               }
             },
           })

@@ -134,7 +134,7 @@ public class CourseUpdateService
         // ── 6. Update existing chapters (title / order) ───────────────────────
         foreach (var dto in request.UpdatedNodes)
         {
-            var chapter = await _chapterRepository.GetByIdAsync(dto.Id, ct);
+            var chapter = await _chapterRepository.GetByIdWithTranslationsAsync(dto.Id, ct);
             if (chapter is null || chapter.CourseVersionId != workingVersion.Id) continue;
 
             var chTranslation = chapter.Translations.FirstOrDefault();

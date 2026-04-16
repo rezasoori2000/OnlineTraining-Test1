@@ -29,5 +29,7 @@ export function useChapterContent(id: string | null) {
     queryKey: ['chapterContent', id],
     queryFn: () => portalApi.getChapterContent(id!),
     enabled: !!id,
+    staleTime: 60 * 60 * 1000,  // 1 hour — large HTML, treat as immutable during a session
+    gcTime: 60 * 60 * 1000,     // keep in memory for the full session
   })
 }
