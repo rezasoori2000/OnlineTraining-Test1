@@ -11,4 +11,11 @@ public interface IFolderRepository
     Task AddAsync(Folder folder, CancellationToken ct = default);
     void Remove(FolderCourse folderCourse);
     Task SaveChangesAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns the ordered folder name segments from root to leaf for the folder that contains
+    /// <paramref name="courseId"/>. E.g. ["F1", "F1-1"] for Root → F1 → F1-1.
+    /// Returns an empty list if the course has no folder assignment.
+    /// </summary>
+    Task<List<string>> GetFolderPathForCourseAsync(Guid courseId, CancellationToken ct = default);
 }

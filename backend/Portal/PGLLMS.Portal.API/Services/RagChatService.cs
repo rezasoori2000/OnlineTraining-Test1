@@ -28,23 +28,42 @@ public class RagChatService
 
     public async Task<ChatResponse> ChatAsync(ChatRequest request, CancellationToken ct = default)
     {
-        // ── 1. Search vector store for relevant context ──────────────────────
-        var results = await _embeddingService.SearchAsync(request.Question, limit: 5, ct);
+        // ── 1. Search vector store — apply score threshold ───────────────────
+        var rawResults = await _embeddingService.SearchAsync(
+            request.Question, limit: _settings.SearchLimit, ct);
 
-        // ── 2. Build context block and deduplicated sources ──────────────────
-        var contextParts = results.Select((r, i) =>
-            $"[Source {i + 1}: {r.Title} ({r.Type})]\n{r.ChunkText}").ToList();
+        var results = rawResults
+            .Where(r => r.Score >= _settings.ScoreThreshold)
+            .ToList();
+
+        _logger.LogDebug("Vector search: {Raw} hits, {Filtered} above threshold {T:F2}",
+            rawResults.Count, results.Count, _settings.ScoreThreshold);
+
+        // ── 2. Build context block within token budget ────────────────────────
+        // Approximate: 4 chars ≈ 1 token; reserve 1/3 of context window for prompt/answer
+        int contextBudgetChars = _settings.LlmNumCtx * 3;
+        int usedChars = 0;
+        var contextParts = new List<string>();
+
+        foreach (var (r, i) in results.Select((r, i) => (r, i)))
+        {
+            var part = $"[Source {i + 1}: {r.Title} ({r.Type})]\n{r.ChunkText}";
+            if (usedChars + part.Length > contextBudgetChars) break;
+            contextParts.Add(part);
+            usedChars += part.Length;
+        }
 
         var contextBlock = contextParts.Count > 0
             ? string.Join("\n\n", contextParts)
             : "No relevant content was found in the knowledge base.";
 
         var sources = results
+            .Take(contextParts.Count)
             .DistinctBy(r => r.SourceId)
             .Select(r => new ChatSource(r.SourceId, r.Title, r.Type))
             .ToList();
 
-        // ── 3. Build Ollama messages ─────────────────────────────────────────
+        // ── 3. Build Ollama messages ──────────────────────────────────────────
         var systemPrompt =
             "You are a helpful assistant for an online training platform. " +
             "Answer questions ONLY based on the context provided below. " +
@@ -61,18 +80,30 @@ public class RagChatService
 
         if (request.History is { Count: > 0 })
         {
-            foreach (var msg in request.History.TakeLast(6))
+            int historyLimit = _settings.HistoryTurns * 2;
+            foreach (var msg in request.History.TakeLast(historyLimit))
                 messages.Add(new { role = msg.Role, content = msg.Content });
         }
 
         messages.Add(new { role = "user", content = request.Question });
 
-        // ── 4. Call Ollama ───────────────────────────────────────────────────
+        // ── 4. Call Ollama with tuned options ─────────────────────────────────
         string answer;
         try
         {
             var ollama = _httpClientFactory.CreateClient("Ollama");
-            var body = new { model = _settings.ChatModel, stream = false, messages };
+            var body = new
+            {
+                model = _settings.ChatModel,
+                stream = false,
+                messages,
+                options = new
+                {
+                    temperature = _settings.LlmTemperature,
+                    num_ctx = _settings.LlmNumCtx,
+                    num_predict = _settings.LlmNumPredict
+                }
+            };
             var response = await ollama.PostAsJsonAsync("/api/chat", body, ct);
 
             if (!response.IsSuccessStatusCode)
@@ -96,7 +127,7 @@ public class RagChatService
         return new ChatResponse(answer, sources);
     }
 
-    // ── Private response DTOs ────────────────────────────────────────────────
+    // ── Private response DTOs ─────────────────────────────────────────────────
 
     private sealed class OllamaChatResponse
     {

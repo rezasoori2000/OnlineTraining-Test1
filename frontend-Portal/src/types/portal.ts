@@ -42,4 +42,5 @@ export interface ChapterContent {
   chapterId: string
   title: string
   htmlContent: string | null
+  pdfDownloadUrl?: string | null
 }

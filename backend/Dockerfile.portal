@@ -1,0 +1,35 @@
+# ============================================================
+#  Portal API — Multi-stage Dockerfile
+#  Build context: ./backend  (root of the backend folder)
+# ============================================================
+
+# ── Stage 1: Build ───────────────────────────────────────────
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+COPY PGLLMS.sln .
+COPY Admin/PGLLMS.Admin.Domain/PGLLMS.Admin.Domain.csproj             Admin/PGLLMS.Admin.Domain/
+COPY Admin/PGLLMS.Admin.Application/PGLLMS.Admin.Application.csproj   Admin/PGLLMS.Admin.Application/
+COPY Admin/PGLLMS.Admin.Infrastructure/PGLLMS.Admin.Infrastructure.csproj Admin/PGLLMS.Admin.Infrastructure/
+COPY Admin/PGLLMS.Admin.API/PGLLMS.Admin.API.csproj                   Admin/PGLLMS.Admin.API/
+COPY Portal/PGLLMS.Portal.API/PGLLMS.Portal.API.csproj                Portal/PGLLMS.Portal.API/
+
+RUN dotnet restore "Portal/PGLLMS.Portal.API/PGLLMS.Portal.API.csproj"
+
+COPY . .
+RUN dotnet publish "Portal/PGLLMS.Portal.API/PGLLMS.Portal.API.csproj" \
+    -c Release -o /app/publish --no-restore
+
+# ── Stage 2: Runtime ──────────────────────────────────────────
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+WORKDIR /app
+
+RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app
+USER appuser
+
+COPY --from=build --chown=appuser:appuser /app/publish .
+
+ENV ASPNETCORE_URLS=http://+:8081
+EXPOSE 8081
+
+ENTRYPOINT ["dotnet", "PGLLMS.Portal.API.dll"]

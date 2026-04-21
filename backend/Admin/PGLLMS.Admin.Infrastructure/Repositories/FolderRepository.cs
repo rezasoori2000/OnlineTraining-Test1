@@ -49,4 +49,28 @@ public class FolderRepository : IFolderRepository
 
     public Task SaveChangesAsync(CancellationToken ct = default)
         => _context.SaveChangesAsync(ct);
+
+    public async Task<List<string>> GetFolderPathForCourseAsync(Guid courseId, CancellationToken ct = default)
+    {
+        // Find the folder that directly contains the course
+        var folderCourse = await _context.FolderCourses
+            .FirstOrDefaultAsync(fc => fc.CourseId == courseId, ct);
+
+        if (folderCourse is null) return new List<string>();
+
+        // Load all folders into a flat dictionary and walk up the tree
+        var allFolders = await _context.Folders.ToListAsync(ct);
+        var dict = allFolders.ToDictionary(f => f.Id);
+
+        var path = new List<string>();
+        Guid? current = folderCourse.FolderId;
+
+        while (current.HasValue && dict.TryGetValue(current.Value, out var folder))
+        {
+            path.Insert(0, folder.Name);
+            current = folder.ParentId;
+        }
+
+        return path;
+    }
 }

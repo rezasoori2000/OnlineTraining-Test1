@@ -97,6 +97,7 @@ export type EditBuilderAction =
   | { type: 'MOVE_UP'; clientId: string }
   | { type: 'MOVE_DOWN'; clientId: string }
   | { type: 'SET_CONTENT'; clientId: string; html: string }
+  | { type: 'MARK_PDF_UPLOADED'; clientId: string }
   | { type: 'ADD_QUIZ'; clientId: string }
   | { type: 'REMOVE_QUIZ'; clientId: string }
   | { type: 'UPDATE_QUIZ_MANDATORY'; clientId: string; isMandatory: boolean }
@@ -290,6 +291,16 @@ function reducer(state: EditCourseFormState, action: EditBuilderAction): EditCou
           htmlContent: action.html,
           hasContent: true,
           isContentDirty: !ch.isNew,
+        })),
+      }
+
+    case 'MARK_PDF_UPLOADED':
+      return {
+        ...state,
+        chapters: mapChapter(state.chapters, action.clientId, (ch) => ({
+          ...ch,
+          hasContent: true,
+          isContentDirty: false,
         })),
       }
 

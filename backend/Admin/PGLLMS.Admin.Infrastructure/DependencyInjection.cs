@@ -7,6 +7,7 @@ using PGLLMS.Admin.Infrastructure.Ai;
 using PGLLMS.Admin.Infrastructure.Persistence;
 using PGLLMS.Admin.Infrastructure.Repositories;
 using PGLLMS.Admin.Infrastructure.Security;
+using PGLLMS.Admin.Infrastructure.Storage;
 using AppInterfaces = PGLLMS.Admin.Application.Interfaces;
 
 namespace PGLLMS.Admin.Infrastructure;
@@ -60,7 +61,21 @@ public static class DependencyInjection
             client.Timeout = TimeSpan.FromSeconds(30);
         });
 
+        services.AddHttpClient("Marker", client =>
+        {
+            client.BaseAddress = new Uri(
+                configuration["Ai:MarkerBaseUrl"] ?? "http://localhost:8001");
+            // Large PDFs can take time to OCR — allow up to 10 minutes
+            client.Timeout = TimeSpan.FromMinutes(10);
+        });
+
         services.AddScoped<AppInterfaces.IEmbeddingService, EmbeddingService>();
+
+        // ── Local File Server (mapped drive storage) ──────────────────────────
+        services.Configure<LocalFileServerSettings>(
+            configuration.GetSection(LocalFileServerSettings.SectionName));
+
+        services.AddSingleton<AppInterfaces.IOneDriveService, LocalFileServerService>();
 
         return services;
     }

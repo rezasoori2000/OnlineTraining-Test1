@@ -121,11 +121,19 @@ export function CoursePage({ courseId, courseTitle, onBack }: CoursePageProps) {
               </div>
             )}
             {chapterContent && (
-              <div className="p-4">
-                {chapterContent.htmlContent
-                  ? <ScaledContent html={chapterContent.htmlContent} />
-                  : <p className="text-sm text-gray-400 italic">No content available.</p>
-                }
+              <div className="p-4 min-h-full flex flex-col">
+                {chapterContent.pdfDownloadUrl ? (
+                  <iframe
+                    src={chapterContent.pdfDownloadUrl}
+                    title={chapterContent.title}
+                    className="w-full flex-1 border-0 min-h-[70vh]"
+                    style={{ height: '100%' }}
+                  />
+                ) : chapterContent.htmlContent ? (
+                  <ScaledContent html={chapterContent.htmlContent} />
+                ) : (
+                  <p className="text-sm text-gray-400 italic">No content available.</p>
+                )}
               </div>
             )}
           </main>

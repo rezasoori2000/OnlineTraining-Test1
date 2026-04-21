@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PGLLMS.Admin.Application.DTOs.Chapter;
 using PGLLMS.Admin.Application.Services;
+using PGLLMS.Admin.API.Services;
 
 namespace PGLLMS.Admin.API.Controllers;
 
@@ -10,10 +11,12 @@ namespace PGLLMS.Admin.API.Controllers;
 public class ChaptersController : ControllerBase
 {
     private readonly ChapterService _chapterService;
+    private readonly ChapterPdfService _pdfService;
 
-    public ChaptersController(ChapterService chapterService)
+    public ChaptersController(ChapterService chapterService, ChapterPdfService pdfService)
     {
         _chapterService = chapterService;
+        _pdfService = pdfService;
     }
 
     /// <summary>
@@ -61,5 +64,38 @@ public class ChaptersController : ControllerBase
         }
 
         return CreatedAtAction(nameof(UploadContent), new { chapterId }, result.Data);
+    }
+
+    /// <summary>
+    /// Uploads a PDF file for a leaf chapter. The file is stored in OneDrive and its
+    /// text is extracted and indexed in Qdrant. The OneDrive path is saved in the DB.
+    /// </summary>
+    [HttpPost("{chapterId:guid}/pdf")]
+    [ProducesResponseType(typeof(ChapterContentResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UploadPdf(
+        [FromRoute] Guid chapterId,
+        IFormFile pdf,
+        CancellationToken ct)
+    {
+        if (pdf is null || pdf.Length == 0)
+            return BadRequest(new { message = "No PDF file provided." });
+
+        var ext = Path.GetExtension(pdf.FileName).ToLowerInvariant();
+        if (ext != ".pdf")
+            return BadRequest(new { message = "Only PDF files are accepted." });
+
+        using var stream = pdf.OpenReadStream();
+        var (succeeded, error, data) = await _pdfService.UploadPdfAsync(chapterId, stream, pdf.FileName, ct);
+
+        if (!succeeded)
+        {
+            if (error!.Contains("not found", StringComparison.OrdinalIgnoreCase))
+                return NotFound(new { message = error });
+            return BadRequest(new { message = error });
+        }
+
+        return CreatedAtAction(nameof(UploadPdf), new { chapterId }, data);
     }
 }

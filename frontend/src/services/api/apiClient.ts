@@ -17,10 +17,26 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return response.json() as Promise<T>
 }
 
+async function requestFormData<T>(path: string, body: FormData): Promise<T> {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    body,
+    // Do NOT set Content-Type — browser sets it with the correct boundary
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(error || `HTTP ${response.status}`)
+  }
+
+  return response.json() as Promise<T>
+}
+
 export const apiClient = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, body: unknown) =>
     request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
+  postFormData: <T>(path: string, body: FormData) => requestFormData<T>(path, body),
   put: <T>(path: string, body: unknown) =>
     request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
   delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),

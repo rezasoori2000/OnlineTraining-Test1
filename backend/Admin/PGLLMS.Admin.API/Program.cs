@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using PGLLMS.Admin.Application;
 using PGLLMS.Admin.Infrastructure;
+using PGLLMS.Admin.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -79,6 +80,9 @@ builder.Services.AddAuthorization();
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// PDF upload / OneDrive orchestration service
+builder.Services.AddScoped<ChapterPdfService>();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("DevFrontend", policy =>
@@ -95,6 +99,12 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+// Allow large file uploads (PDF OCR endpoint accepts up to 100 MB)
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o =>
+{
+    o.MultipartBodyLengthLimit = 100 * 1024 * 1024; // 100 MB
+});
 
 // ----------------------------------------------------------------
 // Swagger — supports Bearer token entry for both schemes

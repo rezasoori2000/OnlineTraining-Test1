@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { EditChapterNodeState, EditQuizState } from '@/types/editCourse'
 import { EditBuilderAction } from './useEditCourseBuilder'
 import { convertFileToHtml } from '@/utils/convertFileToHtml'
+import { apiClient } from '@/services/api/apiClient'
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024 // 50 MB
 
@@ -167,6 +168,7 @@ function QuizSection({
 export function EditChapterEditor({ node, dispatch }: Props) {
   const [converting, setConverting] = useState(false)
   const [convertError, setConvertError] = useState<string | null>(null)
+  const [uploadSuccess, setUploadSuccess] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const isLeaf = node.children.filter((c) => !(c.isNew && c.isDeleted)).length === 0
@@ -186,12 +188,28 @@ export function EditChapterEditor({ node, dispatch }: Props) {
     }
 
     setConvertError(null)
+    setUploadSuccess(false)
     setConverting(true)
+
     try {
-      const html = await convertFileToHtml(file)
-      dispatch({ type: 'SET_CONTENT', clientId: node.clientId, html })
+      if (ext === 'pdf') {
+        // PDF: upload directly to OneDrive via the backend endpoint
+        if (node.isNew || !node.serverId) {
+          setConvertError('Save this section first, then upload a PDF.')
+          return
+        }
+        const formData = new FormData()
+        formData.append('pdf', file)
+        await apiClient.postFormData(`/admin/chapters/${node.serverId}/pdf`, formData)
+        dispatch({ type: 'MARK_PDF_UPLOADED', clientId: node.clientId })
+        setUploadSuccess(true)
+      } else {
+        // PPTX / PPT: convert to HTML locally then batch with next Save
+        const html = await convertFileToHtml(file)
+        dispatch({ type: 'SET_CONTENT', clientId: node.clientId, html })
+      }
     } catch (err) {
-      setConvertError(err instanceof Error ? err.message : 'Conversion failed.')
+      setConvertError(err instanceof Error ? err.message : 'Upload failed.')
     } finally {
       setConverting(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
@@ -245,6 +263,11 @@ export function EditChapterEditor({ node, dispatch }: Props) {
                 New content ready ({Math.round((node.htmlContent?.length ?? 0) / 1024)} KB) — will be saved on next Save.
               </span>
             </div>
+          ) : uploadSuccess ? (
+            <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
+              <span>✓</span>
+              <span>PDF uploaded to OneDrive successfully.</span>
+            </div>
           ) : node.hasContent ? (
             <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
               <span>✓</span>
@@ -270,7 +293,7 @@ export function EditChapterEditor({ node, dispatch }: Props) {
               className="block w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 disabled:opacity-50"
             />
             {converting && (
-              <p className="mt-1 text-xs text-indigo-500 animate-pulse">Converting file…</p>
+              <p className="mt-1 text-xs text-indigo-500 animate-pulse">Processing file…</p>
             )}
             {convertError && (
               <p className="mt-1 text-xs text-red-500">{convertError}</p>

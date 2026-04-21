@@ -8,6 +8,9 @@ public class AiSettings
     public string OllamaBaseUrl { get; set; } = "http://localhost:11434";
     public string QdrantBaseUrl { get; set; } = "http://localhost:6333";
 
+    /// <summary>Marker OCR sidecar base URL. In Docker: http://marker:8001, locally: http://localhost:8001.</summary>
+    public string MarkerBaseUrl { get; set; } = "http://localhost:8001";
+
     // ── Models ────────────────────────────────────────────────────────────────
     /// <summary>Ollama model for embeddings. nomic-embed-text=768-dim; mxbai-embed-large=1024-dim.</summary>
     public string EmbeddingModel { get; set; } = "nomic-embed-text";

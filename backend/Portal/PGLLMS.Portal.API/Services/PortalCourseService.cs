@@ -12,6 +12,7 @@ public class PortalCourseService
     private readonly ICourseVersionRepository _versionRepo;
     private readonly IChapterRepository _chapterRepo;
     private readonly IChapterContentRepository _contentRepo;
+    private readonly IOneDriveService _oneDrive;
     private readonly AdminDbContext _dbContext;
 
     public PortalCourseService(
@@ -19,12 +20,14 @@ public class PortalCourseService
         ICourseVersionRepository versionRepo,
         IChapterRepository chapterRepo,
         IChapterContentRepository contentRepo,
+        IOneDriveService oneDrive,
         AdminDbContext dbContext)
     {
         _courseRepo = courseRepo;
         _versionRepo = versionRepo;
         _chapterRepo = chapterRepo;
         _contentRepo = contentRepo;
+        _oneDrive = oneDrive;
         _dbContext = dbContext;
     }
 
@@ -67,10 +70,21 @@ public class PortalCourseService
         var content = await _contentRepo.GetByChapterIdAsync(chapterId, ct);
         var title = chapter.Translations.FirstOrDefault()?.Title ?? "Untitled";
 
+        // Resolve a short-lived download URL when the chapter has a PDF in OneDrive
+        string? pdfDownloadUrl = null;
+        if (content?.OneDriveFilePath is not null)
+        {
+            pdfDownloadUrl = await _oneDrive.GetDownloadUrlAsync(content.OneDriveFilePath, ct);
+        }
+
+        // For PDF chapters the HtmlContent holds extracted text (not returned to portal)
+        var htmlForPortal = content?.OneDriveFilePath is null ? content?.HtmlContent : null;
+
         return new PortalChapterContentDto(
             chapterId,
             title,
-            content?.HtmlContent);
+            htmlForPortal,
+            pdfDownloadUrl);
     }
 
     private static PortalChapterNodeDto BuildChapterTree(Chapter ch, HashSet<Guid> withContent)

@@ -16,35 +16,81 @@ pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.vers
 const RENDER_SCALE = 1.5
 
 // ── PDF ────────────────────────────────────────────────────────────────────────
+//
+// Strategy:
+//   1.  Try PDF.js getTextContent() — works for digitally-created PDFs (Word/Office exports).
+//       If extracted text is substantial (>150 chars) → wrap in <p> tags and return.
+//       This text is readable in the Portal AND indexable by the embedding pipeline.
+//
+//   2.  Fallback — canvas rendering (image-only PDFs / display only, not indexed in Qdrant).
 
-async function convertPdfToHtml(file: File): Promise<string> {
-  const data = await file.arrayBuffer()
-  const loadingTask = pdfjs.getDocument({ data })
-  const pdf = await loadingTask.promise
+const MIN_TEXT_CHARS = 150 // below this we consider the PDF image-based
 
+/**
+ * Extract text layer from all pages using PDF.js getTextContent.
+ * Returns empty string if the PDF has no embedded text.
+ */
+async function extractPdfTextLayer(pdf: pdfjs.PDFDocumentProxy): Promise<string> {
+  const pageTexts: string[] = []
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i)
+    const content = await page.getTextContent()
+    const pageText = content.items
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((item: any) => item.str as string)
+      .join(' ')
+    pageTexts.push(pageText)
+  }
+  return pageTexts.join('\n\n').trim()
+}
+
+/** Render all PDF pages to canvas and return HTML with base64 <img> tags. */
+async function renderPdfToImages(pdf: pdfjs.PDFDocumentProxy): Promise<string> {
   const imgTags: string[] = []
-
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i)
     const viewport = page.getViewport({ scale: RENDER_SCALE })
-
     const canvas = document.createElement('canvas')
     canvas.width = viewport.width
     canvas.height = viewport.height
-
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('Could not get canvas context.')
-
     await page.render({ canvasContext: ctx, viewport }).promise
-
     imgTags.push(
       `<img src="${canvas.toDataURL('image/png')}" ` +
         `style="width:${viewport.width}px;max-width:100%;display:block;margin-bottom:8px;" ` +
         `alt="Page ${i}" />`,
     )
   }
-
   return `<div class="pdf-content">${imgTags.join('\n')}</div>`
+}
+
+/** Wrap plain text into semantic HTML paragraphs. */
+function textToHtml(text: string): string {
+  const paragraphs = text
+    .split(/\n{2,}/)
+    .map((p) => p.replace(/\n/g, ' ').trim())
+    .filter((p) => p.length > 0)
+    .map((p) => `<p>${p}</p>`)
+  return `<div class="pdf-text-content">${paragraphs.join('\n')}</div>`
+}
+
+async function convertPdfToHtml(file: File): Promise<string> {
+  const data = await file.arrayBuffer()
+  const pdf = await pdfjs.getDocument({ data }).promise
+
+  // ── Step 1: try text layer (Word / Office exports always have one) ────────
+  const textLayerContent = await extractPdfTextLayer(pdf)
+  if (textLayerContent.length >= MIN_TEXT_CHARS) {
+    return textToHtml(textLayerContent)
+  }
+
+  // ── Step 2: fallback — canvas images (display only, not indexable) ────────
+  console.warn(
+    '[convertPdfToHtml] No text layer found. Falling back to image rendering. ' +
+      'Content will NOT be indexed in the RAG search database.',
+  )
+  return renderPdfToImages(pdf)
 }
 
 // ── PPTX ───────────────────────────────────────────────────────────────────────

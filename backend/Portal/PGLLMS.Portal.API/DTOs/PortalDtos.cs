@@ -38,4 +38,5 @@ public record PortalChapterNodeDto(
 public record PortalChapterContentDto(
     Guid ChapterId,
     string Title,
-    string? HtmlContent);
+    string? HtmlContent,
+    string? PdfDownloadUrl);

@@ -1,0 +1,39 @@
+# ============================================================
+#  Admin API — Multi-stage Dockerfile
+#  Build context: ./backend  (root of the backend folder)
+# ============================================================
+
+# ── Stage 1: Build ───────────────────────────────────────────
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copy project files first for better layer caching
+# (only re-run restore when .csproj files change)
+COPY PGLLMS.sln .
+COPY Admin/PGLLMS.Admin.Domain/PGLLMS.Admin.Domain.csproj             Admin/PGLLMS.Admin.Domain/
+COPY Admin/PGLLMS.Admin.Application/PGLLMS.Admin.Application.csproj   Admin/PGLLMS.Admin.Application/
+COPY Admin/PGLLMS.Admin.Infrastructure/PGLLMS.Admin.Infrastructure.csproj Admin/PGLLMS.Admin.Infrastructure/
+COPY Admin/PGLLMS.Admin.API/PGLLMS.Admin.API.csproj                   Admin/PGLLMS.Admin.API/
+COPY Portal/PGLLMS.Portal.API/PGLLMS.Portal.API.csproj                Portal/PGLLMS.Portal.API/
+
+RUN dotnet restore "Admin/PGLLMS.Admin.API/PGLLMS.Admin.API.csproj"
+
+# Copy all source code and publish
+COPY . .
+RUN dotnet publish "Admin/PGLLMS.Admin.API/PGLLMS.Admin.API.csproj" \
+    -c Release -o /app/publish --no-restore
+
+# ── Stage 2: Runtime ──────────────────────────────────────────
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+WORKDIR /app
+
+# Run as non-root for security
+RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app
+USER appuser
+
+COPY --from=build --chown=appuser:appuser /app/publish .
+
+ENV ASPNETCORE_URLS=http://+:8080
+EXPOSE 8080
+
+ENTRYPOINT ["dotnet", "PGLLMS.Admin.API.dll"]
